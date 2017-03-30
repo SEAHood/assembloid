@@ -18,6 +18,7 @@ var SRC_ROOT = './src',
 		STATIC_ROOT + '/fonts/*',
 		STATIC_ROOT + '/img/*',
 		STATIC_ROOT + '/css/*',
+		STATIC_ROOT + '/assets/*',
 		STATIC_ROOT + '/js/*.min.js'
 	],
 
@@ -39,7 +40,7 @@ var SRC_ROOT = './src',
 
 gulp.task('build+deploy', function(callback) {
 	runSequence(
-		'clean',
+		//'clean',
 		'build:ts',
 		'move:static',
 		'deploy'
