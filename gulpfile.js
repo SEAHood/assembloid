@@ -8,6 +8,7 @@ var order = require("gulp-order");
 var SRC_ROOT = './src',
 	TS_SRC = [
 		SRC_ROOT + '/references.ts',
+		SRC_ROOT + '/model/*.ts',
 		SRC_ROOT + '/main.ts'
 		// Add other files to compile here
 	],

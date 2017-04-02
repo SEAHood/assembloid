@@ -42992,7 +42992,7 @@ Phaser.Gamepad.prototype = {
     },
 
     /**
-    * Main gamepad update loop. Should not be called manually.
+    * Assembloid gamepad update loop. Should not be called manually.
     * @method Phaser.Gamepad#update
     * @protected
     */
@@ -43598,7 +43598,7 @@ Phaser.SinglePad.prototype = {
     },
 
     /**
-    * Main update function called by Phaser.Gamepad.
+    * Assembloid update function called by Phaser.Gamepad.
     * 
     * @method Phaser.SinglePad#pollStatus
     */

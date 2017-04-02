@@ -3,17 +3,41 @@
   <title>p5 ts</title>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="img/fav.ico">
+  <link href="https://fonts.googleapis.com/css?family=Oleo+Script" rel="stylesheet">
   <script src="js/jquery.min.js"></script>
   <script src="js/phaser.min.js"></script>
   <script src="js/underscore.min.js"></script>
   <script src="js/main.js"></script>
 
   <style>
+    body {
+      cursor: crosshair;
+      background-color: #202020;
+      text-align:center;
+      color: #d0d0d0;
+      font-family: 'Oleo Script', cursive;
+
+    }
+
+    canvas {
+      margin:0 auto;
+    }
+
+    #readme {
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 
 <body>
-left click to place tile<br/>
-+ / - on numpad to change tile size<br/>
+  <div id="title">
+    <h1>assembloid</h1>
+  </div>
+  <div id="readme">
+    left click to place tile<br/>
+    + / - on numpad to change tile size<br/>
+    1 / 2 to switch components<br/>
+  </div>
+  <div id="content"></div>
 </body>
 </html>
