@@ -5,9 +5,11 @@ module Base {
     export class Assembloid {
         private game: Phaser.Game;
         private tilemap: Phaser.Tilemap;
+        private overlayMap: Phaser.Tilemap;
         private groundLayer: Phaser.TilemapLayer;
         private wallLayer: Phaser.TilemapLayer;
         private componentLayer: Phaser.TilemapLayer;
+        private overlayLayer: Phaser.TilemapLayer;
 
         private marker: Phaser.Graphics;
 
@@ -19,6 +21,8 @@ module Base {
         private componentKey1: Phaser.Key;
         private componentKey2: Phaser.Key;
         private componentKey3: Phaser.Key;
+
+        private components: Component[];
 
         private static TILE_SIZE = 32;
 
@@ -34,30 +38,39 @@ module Base {
                     create: this.create,
                     update: this.update
                 });
+
         }
 
         private preload() {
             this.game.load.tilemap('map', 'assets/tiles.json', null, Phaser.Tilemap.TILED_JSON);
+            this.game.load.tilemap('overlay', 'assets/overlay.json', null, Phaser.Tilemap.TILED_JSON);
             this.game.load.image('assembloid_tiles', 'assets/assembloid.png');
+            this.game.load.image('assembloid_overlay', 'assets/overlay.png');
         }
 
         private create() {
             this.game.physics.startSystem(Phaser.Physics.ARCADE);
             this.game.canvas.oncontextmenu = (e: PointerEvent) => e.preventDefault();
+
             this.tilemap = this.game.add.tilemap('map');
-            //this.tilemap.addTilesetImage('desert', 'tiles');
             this.tilemap.addTilesetImage('assembloid_tiles');
             this.groundLayer = this.tilemap.createLayer('Ground');
             this.componentLayer = this.tilemap.createLayer('Component');
             this.wallLayer = this.tilemap.createLayer('Wall');
 
-            //this.componentLayer = this.tilemap.createLayer('Component');
+            this.overlayMap = this.game.add.tilemap('overlay');
+            this.overlayMap.addTilesetImage('assembloid_overlay');
+            this.overlayLayer = this.overlayMap.createLayer('Overlay');
+
             this.groundLayer.resizeWorld();
 
 
             this.markerWidth = 2;
             this.markerHeight = 2;
             this.marker = this.game.add.graphics(0, 0);
+
+
+            this.components = [];
 
             this.plusKey = this.game.input.keyboard.addKey(Phaser.Keyboard.NUMPAD_ADD);
             this.minusKey = this.game.input.keyboard.addKey(Phaser.Keyboard.NUMPAD_SUBTRACT);
@@ -101,7 +114,7 @@ module Base {
             let componentWidth = 1;
             let componentHeight = 1;
 
-            switch( this.selectedComponent ) {
+            switch (this.selectedComponent) {
                 case ComponentType.MACHINE_1:
                     componentWidth = Machine1.width;
                     componentHeight = Machine1.height;
@@ -122,8 +135,9 @@ module Base {
             this.markerHeight = componentHeight;
 
             if (selectedTile) {
-                let halfMarkerW = componentWidth / 2;//this.markerWidth / 2;
-                let halfMarkerH = componentHeight / 2; //this.markerHeight / 2;
+
+                let halfMarkerW = componentWidth / 2;
+                let halfMarkerH = componentHeight / 2;
 
                 if (halfMarkerW % 1 != 0) {
                     let markerTileX = selectedTile.x - ( (componentWidth - 1) / 2 );
@@ -143,7 +157,7 @@ module Base {
 
                 for (let x = 0; x < componentWidth; x++) {
                     for (let y = 0; y < componentHeight; y++) {
-                        //let wallTile =  this.tilemap.getTileWorldXY(this.marker.x + (x*32), this.marker.y + (y*32), null, null, this.wallLayer);
+
                         let componentTile = this.tilemap.getTileWorldXY(
                             this.marker.x + (x * Assembloid.TILE_SIZE),
                             this.marker.y + (y * Assembloid.TILE_SIZE),
@@ -159,32 +173,36 @@ module Base {
                             Assembloid.TILE_SIZE,
                             this.wallLayer
                         );
-                        /*if ( wallTile ) {
-                         if ( wallTile.index != 34 ) {
-                         canPlace = false;
-                         }
-                         }*/
-                        if (componentTile || wallTile) {
-                            //if ( componentTile.index != null ) {
-                            canPlace = false;
-                            //}
-                            //selectedTiles.push({x:x, y:y, t:componentTile});
-                        } else {
-                            // tile is empty
-                        }
-                        selectedTiles.push({x: x, y: y});//, t:componentTile});
+
+                        canPlace = canPlace && !componentTile && !wallTile;
+                        selectedTiles.push({x: x, y: y});
+
                     }
+                }
+
+            }
+
+
+
+            for (let x = 0; x < this.overlayMap.width; x++) {
+                for (let y = 0; y < this.overlayMap.height; y++) {
+                    this.overlayMap.removeTile(x, y, this.overlayLayer);
                 }
             }
 
 
-            if (canPlace && (activePointer.leftButton.isDown || activePointer.rightButton.isDown)) {
+            this.marker.clear();
+            let markerColour = canPlace ? 0x00ff00 : 0xff0000;
+            this.marker.lineStyle(2, markerColour, 1);
+            this.marker.drawRect(0, 0, Assembloid.TILE_SIZE * this.markerWidth, Assembloid.TILE_SIZE * this.markerHeight);
+
+            if (canPlace) {
 
                 let cX = this.marker.x / Assembloid.TILE_SIZE;
                 let cY = this.marker.y / Assembloid.TILE_SIZE;
-                let newComponent : Component;
+                let newComponent: Component;
 
-                switch( this.selectedComponent ) {
+                switch (this.selectedComponent) {
                     case ComponentType.MACHINE_1:
                         newComponent = new Machine1(cX, cY);
                         break;
@@ -198,86 +216,24 @@ module Base {
                         break;
                 }
 
-                let test = "";
                 let tileGraphics = newComponent.getTileGraphics();
-                _.each( tileGraphics, (row, y) => {
-                    _.each( row, (tileIndex, x) => {
-
-                        test += tileGraphics[x][y] + ", ";
-
+                _.each(tileGraphics, (row, y) => {
+                    _.each(row, (tileIndex, x) => {
                         let tileX = (this.marker.x / Assembloid.TILE_SIZE) + x;
                         let tileY = (this.marker.y / Assembloid.TILE_SIZE) + y;
-                        //console.log("Placing index " + tileIndex + " at " + x + ", " + y);
-                        //if ( !this.tilemap.getTile(tile.x, tile.y, this.componentLayer) || this.tilemap.getTile(tile.x, tile.y, this.componentLayer).index != tileIndex ) {
-                        this.tilemap.putTile(tileIndex, tileX, tileY, this.componentLayer);
-                        console.log(tileIndex + " at " + tileX + ", " + tileY + " | x:" + x + ", y:" + y + " | markerX:"+this.marker.x + ", markerY:" + this.marker.y);
+                        this.overlayMap.putTile(tileIndex, tileX, tileY, this.overlayLayer);
+
+                        if (canPlace && (activePointer.leftButton.isDown || activePointer.rightButton.isDown) ) {
+                            console.log("placing component");
+                            this.components.push(newComponent);
+                            this.tilemap.putTile(tileIndex, tileX, tileY, this.componentLayer);
+                        }
+
+                        //console.log(tileIndex + " at " + tileX + ", " + tileY + " | x:" + x + ", y:" + y + " | markerX:" + this.marker.x + ", markerY:" + this.marker.y);
                     });
-                    test+="\n";
 
                 });
-
-                console.log(test);
-
-                /*_.each(selectedTiles, (tile) => {
-                    let tileIndex: number;
-
-                    if (activePointer.rightButton.isDown) {
-                        tileIndex = 30;
-                    } else {
-
-                        if (tile.y == 0) {
-                            //top row
-                            if (tile.x == 0) {
-                                //left
-                                tileIndex = 4;
-                            } else if (tile.x < this.markerWidth - 1) {
-                                // mid
-                                tileIndex = 5;
-                            } else {
-                                //right
-                                tileIndex = 6;
-                            }
-                        } else if (tile.y < this.markerHeight - 1) {
-                            //bottom row
-                            if (tile.x == 0) {
-                                //left
-                                tileIndex = 12;
-                            } else if (tile.x < this.markerWidth - 1) {
-                                // mid
-                                tileIndex = 13;
-                            } else {
-                                //right
-                                tileIndex = 14;
-                            }
-                        } else {
-                            // mid row
-                            if (tile.x == 0) {
-                                //left
-                                tileIndex = 20;
-                            } else if (tile.x < this.markerWidth - 1) {
-                                // mid
-                                tileIndex = 21;
-                            } else {
-                                //right
-                                tileIndex = 22;
-                            }
-                        }
-                    }
-
-                    let x = (this.marker.x / Assembloid.TILE_SIZE) + tile.x;
-                    let y = (this.marker.y / Assembloid.TILE_SIZE) + tile.y;
-                    console.log("Placing index " + tileIndex + " at " + x + ", " + y);
-                    //if ( !this.tilemap.getTile(tile.x, tile.y, this.componentLayer) || this.tilemap.getTile(tile.x, tile.y, this.componentLayer).index != tileIndex ) {
-                    this.tilemap.putTile(tileIndex, x, y, this.componentLayer);
-                    }
-                });*/
             }
-
-            this.marker.clear();
-
-            let markerColour = canPlace ? 0x00ff00 : 0xff0000;
-            this.marker.lineStyle(2, markerColour, 1);
-            this.marker.drawRect(0, 0, Assembloid.TILE_SIZE * this.markerWidth, Assembloid.TILE_SIZE * this.markerHeight);
 
         }
 
