@@ -21,12 +21,14 @@ module Base {
         private componentKey1: Phaser.Key;
         private componentKey2: Phaser.Key;
         private componentKey3: Phaser.Key;
+        private rotateKey: Phaser.Key;
 
         private components: Component[];
 
         private static TILE_SIZE = 32;
 
-        private selectedComponent: ComponentType;
+        private markerComponent: ComponentType;
+        private selectedComponent: Component;
 
         constructor() {
             this.game = new Phaser.Game(
@@ -79,6 +81,8 @@ module Base {
             this.componentKey2 = this.game.input.keyboard.addKey(Phaser.Keyboard.TWO);
             this.componentKey3 = this.game.input.keyboard.addKey(Phaser.Keyboard.THREE);
 
+            this.rotateKey = this.game.input.keyboard.addKey(Phaser.Keyboard.R);
+
             this.plusKey.onDown.add(() => {
                 this.markerWidth = Math.min(50, this.markerWidth + 1);
                 this.markerHeight = Math.min(50, this.markerHeight + 1);
@@ -90,18 +94,22 @@ module Base {
             }, this);
 
             this.componentKey1.onDown.add(() => {
-                this.selectedComponent = ComponentType.MACHINE_1;
+                this.markerComponent = ComponentType.MACHINE_1;
             }, this);
 
             this.componentKey2.onDown.add(() => {
-                this.selectedComponent = ComponentType.MACHINE_2;
+                this.markerComponent = ComponentType.MACHINE_2;
             }, this);
 
             this.componentKey3.onDown.add(() => {
-                this.selectedComponent = ComponentType.PIPE;
+                this.markerComponent = ComponentType.PIPE;
             }, this);
 
-            this.selectedComponent = ComponentType.MACHINE_1;
+            this.rotateKey.onDown.add(() => {
+                //this.selectedComponent.rotate();
+            }, this);
+
+            this.markerComponent = ComponentType.MACHINE_1;
 
         }
 
@@ -111,52 +119,62 @@ module Base {
             let selectedTiles = [];
             let canPlace = true;
 
-            let componentWidth = 1;
-            let componentHeight = 1;
+            let newComponent: Component;
 
-            switch (this.selectedComponent) {
+            this.selectedComponent = null;
+
+            if ( !selectedTile ) {
+                return;
+            }
+
+            _.each(this.components, (c: Component) => {
+                if (c.occupies(selectedTile)) {
+                    this.selectedComponent = c;
+                }
+            });
+
+
+            switch (this.markerComponent) {
                 case ComponentType.MACHINE_1:
-                    componentWidth = Machine1.width;
-                    componentHeight = Machine1.height;
+                    newComponent = new Machine1();
                     break;
                 case ComponentType.MACHINE_2:
-                    componentWidth = Machine2.width;
-                    componentHeight = Machine2.height;
+                    newComponent = new Machine2();
                     break;
                 case ComponentType.PIPE:
-                    componentWidth = Pipe.width;
-                    componentHeight = Pipe.height;
+                    newComponent = new Pipe();
                     break;
                 default:
                     break;
             }
 
-            this.markerWidth = componentWidth;
-            this.markerHeight = componentHeight;
 
-            if (selectedTile) {
+            this.markerWidth = newComponent.getWidth();
+            this.markerHeight = newComponent.getHeight();
 
-                let halfMarkerW = componentWidth / 2;
-                let halfMarkerH = componentHeight / 2;
+            if (!this.selectedComponent) {
+
+                let halfMarkerW = this.markerWidth / 2;
+                let halfMarkerH = this.markerHeight / 2;
 
                 if (halfMarkerW % 1 != 0) {
-                    let markerTileX = selectedTile.x - ( (componentWidth - 1) / 2 );
+                    let markerTileX = selectedTile.x - ( (this.markerWidth - 1) / 2 );
                     this.marker.x = markerTileX * Assembloid.TILE_SIZE;
                 } else {
-                    let markerTileX = selectedTile.x - ( (componentWidth / 2) - 1 );
+                    let markerTileX = selectedTile.x - ( (this.markerWidth / 2) - 1 );
                     this.marker.x = markerTileX * Assembloid.TILE_SIZE;
                 }
 
                 if (halfMarkerH % 1 != 0) {
-                    let markerTileY = selectedTile.y - ( (componentHeight - 1) / 2 );
+                    let markerTileY = selectedTile.y - ( (this.markerHeight - 1) / 2 );
                     this.marker.y = markerTileY * Assembloid.TILE_SIZE;
                 } else {
-                    let markerTileY = selectedTile.y - ( (componentHeight / 2) - 1 );
+                    let markerTileY = selectedTile.y - ( (this.markerHeight / 2) - 1 );
                     this.marker.y = markerTileY * Assembloid.TILE_SIZE;
                 }
 
-                for (let x = 0; x < componentWidth; x++) {
-                    for (let y = 0; y < componentHeight; y++) {
+                for (let x = 0; x < this.markerWidth; x++) {
+                    for (let y = 0; y < this.markerHeight; y++) {
 
                         let componentTile = this.tilemap.getTileWorldXY(
                             this.marker.x + (x * Assembloid.TILE_SIZE),
@@ -180,8 +198,14 @@ module Base {
                     }
                 }
 
+            } else {
+                // Tile occupied by machine, select machine
+                canPlace = false;
+                this.marker.x = this.selectedComponent.getX() * Assembloid.TILE_SIZE;
+                this.marker.y = this.selectedComponent.getY() * Assembloid.TILE_SIZE;
+                this.markerWidth =  this.selectedComponent.getWidth();
+                this.markerHeight =  this.selectedComponent.getHeight();
             }
-
 
 
             for (let x = 0; x < this.overlayMap.width; x++) {
@@ -200,21 +224,8 @@ module Base {
 
                 let cX = this.marker.x / Assembloid.TILE_SIZE;
                 let cY = this.marker.y / Assembloid.TILE_SIZE;
-                let newComponent: Component;
 
-                switch (this.selectedComponent) {
-                    case ComponentType.MACHINE_1:
-                        newComponent = new Machine1(cX, cY);
-                        break;
-                    case ComponentType.MACHINE_2:
-                        newComponent = new Machine2(cX, cY);
-                        break;
-                    case ComponentType.PIPE:
-                        newComponent = new Pipe(cX, cY);
-                        break;
-                    default:
-                        break;
-                }
+                newComponent.setPosition(cX, cY);
 
                 let tileGraphics = newComponent.getTileGraphics();
                 _.each(tileGraphics, (row, y) => {
@@ -223,8 +234,8 @@ module Base {
                         let tileY = (this.marker.y / Assembloid.TILE_SIZE) + y;
                         this.overlayMap.putTile(tileIndex, tileX, tileY, this.overlayLayer);
 
-                        if (canPlace && (activePointer.leftButton.isDown || activePointer.rightButton.isDown) ) {
-                            console.log("placing component");
+                        if (canPlace && (activePointer.leftButton.isDown || activePointer.rightButton.isDown)) {
+                            // TODO: Stop this from happening pure tonnes of times during a click
                             this.components.push(newComponent);
                             this.tilemap.putTile(tileIndex, tileX, tileY, this.componentLayer);
                         }

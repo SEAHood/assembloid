@@ -13,19 +13,49 @@ module Base {
         private y: number;
 
         // w/h in tiles
-        //private width: number;
-        //private height: number;
+        protected width: number;
+        protected height: number;
 
-        protected tileLayout: number[][];
         protected tileGraphics: number[][];
 
-        constructor(x: number, y: number) {
+        constructor() {}
+
+        public getTileGraphics(): number[][] {
+            return this.tileGraphics;
+        }
+
+        public setPosition(x: number, y: number) {
             this.x = x;
             this.y = y;
         }
 
-        public getTileGraphics() : number[][] {
-            return this.tileGraphics;
+        public occupies(tile: Phaser.Tile): boolean {
+            if ( this.x !== null && this.y !== null ) {
+                for (let x = 0; x < this.width; x++) {
+                    for (let y = 0; y < this.height; y++) {
+                        if (tile.x == x + this.x && tile.y == y + this.y) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        public getWidth() : number {
+            return this.width;
+        }
+
+        public getHeight() : number {
+            return this.height;
+        }
+
+        public getX() : number {
+            return this.x;
+        }
+
+        public getY() : number {
+            return this.y;
         }
 
     }
