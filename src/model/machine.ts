@@ -37,18 +37,18 @@ module Base {
         CURVE_R_T,
         CURVE_R_B,
         DISCONNECTED
-    }
-    ;
+    };
 
-    interface PipeDirectionMatrix {
-        top: number;
-        bottom: number;
-        left: number;
-        right: number;
+    interface PipeConnections {
+        top: Pipe;
+        bottom: Pipe;
+        left: Pipe;
+        right: Pipe;
     }
 
     export class Pipe extends Component {
-        public direction = PipeDirection.STRAIGHT_L_R;
+        public direction : PipeDirection = PipeDirection.STRAIGHT_L_R;
+        private connections : PipeConnections;
 
         constructor() {
             super();
@@ -60,12 +60,79 @@ module Base {
                 ];
         }
 
+        public connect( pipe : Pipe ) : boolean {
+            /*
+              0_ 1_ 2_
+           0 |__|__|__|
+           1 |__|XX|__|
+           2 |__|__|__|
+            */
+
+            let validConnection = false;
+
+            if ( pipe.getY() - 1 == this.getY() ) {
+                if ( pipe.getX() == this.getX() ) {
+                    //coming from above
+                    this.connections.top = pipe;
+                    validConnection = true;
+                }
+            } else if ( pipe.getY() == this.getY() ) {
+                if ( pipe.getX() - 1 == this.getX() ) {
+                    //coming from left
+                    this.connections.left = pipe;
+                    validConnection = true;
+                } else if ( pipe.getX() + 1 == this.getX() ) {
+                    //coming from right
+                    this.connections.right = pipe;
+                    validConnection = true;
+                }
+            } else if ( pipe.getY() + 1 == this.getY() ) {
+                if ( pipe.getX() == this.getX() ) {
+                    //coming from below
+                    this.connections.bottom = pipe;
+                    validConnection = true;
+                }
+            }
+
+            return validConnection;
+        }
+
+        public disconnect( pipe : Pipe ) {
+            this.connections = _.omit( this.connections, (v, k, o) => {
+                return v.getX() == pipe.getX() && v.getY() == pipe.getY();
+            });
+        }
+
         getDirection() {
             return this.direction;
         }
 
         public setDirection(direction: PipeDirection) {
             this.direction = direction;
+        }
+
+        private calculatePossibleDirections() : PipeDirection[] {
+            let connections = _.pairs(this.connections);
+
+            if ( connections.length > 1 ) {
+                // can't change direction, pipe is fixed
+                return [];
+            } else if ( connections.length == 1 ) {
+                if ( this.connections.top ) {
+                    return [PipeDirection.STRAIGHT_T_B, PipeDirection.CURVE_L_T, PipeDirection.CURVE_R_T];
+                } else if ( this.connections.bottom ) {
+                    return [PipeDirection.STRAIGHT_T_B, PipeDirection.CURVE_L_B, PipeDirection.CURVE_R_B];
+                } else if ( this.connections.left ) {
+                    return [PipeDirection.STRAIGHT_L_R, PipeDirection.CURVE_L_T, PipeDirection.CURVE_L_B];
+                } else if ( this.connections.right ) {
+                    return [PipeDirection.STRAIGHT_L_R, PipeDirection.CURVE_R_T, PipeDirection.CURVE_R_B];
+                }
+            } else {
+                // no connections, can either rotate top/bottom or left/right
+                return [PipeDirection.STRAIGHT_L_R, PipeDirection.STRAIGHT_T_B]
+            }
+
+            return [];
         }
 
         public getTileGraphics(): number[][] {
@@ -89,18 +156,6 @@ module Base {
             }
         }
 
-        /*private getDirectionMatrix() : PipeDirectionMatrix {
-         switch( this.direction ) {
-         case PipeDirection.STRAIGHT_L_R: return { top: 0, bottom: 0, left: 1, right: 1 };
-         case PipeDirection.STRAIGHT_T_B: return { top: 1, bottom: 1, left: 0, right: 0 };
-         case PipeDirection.CURVE_L_T:    return { top: 1, bottom: 0, left: 1, right: 0 };
-         case PipeDirection.CURVE_L_B:    return { top: 0, bottom: 1, left: 1, right: 0 };
-         case PipeDirection.CURVE_R_T:    return { top: 1, bottom: 0, left: 0, right: 1 };
-         case PipeDirection.CURVE_R_B:    return { top: 0, bottom: 1, left: 0, right: 1 };
-         case PipeDirection.DISCONNECTED: return { top: 0, bottom: 0, left: 0, right: 0 };
-         default: return null;
-         }
-         }*/
     }
 
 

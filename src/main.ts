@@ -28,7 +28,11 @@ module Base {
         private static TILE_SIZE = 32;
 
         private markerComponent: ComponentType;
-        private selectedComponent: Component;
+        private selectedComponent: Component; // Highlighted by the cursor, element of this.components
+
+        private componentToBePlaced: Component;
+
+        private leftClickPressed = false;
 
         constructor() {
             this.game = new Phaser.Game(
@@ -107,6 +111,23 @@ module Base {
 
             this.rotateKey.onDown.add(() => {
                 //this.selectedComponent.rotate();
+                if ( this.selectedComponent instanceof Pipe ) {
+                    let direction = PipeDirection[Math.floor(Math.random()*7)];
+                    (<Pipe>this.selectedComponent).setDirection( Math.floor(Math.random()*7) );
+
+
+                    // TODO FARM THIS OUT - "drawComponent( component )"
+                    let tileGraphics = this.selectedComponent.getTileGraphics();
+                    _.each(tileGraphics, (row, y) => {
+                        _.each(row, (tileIndex, x) => {
+                            let tileX = (this.marker.x / Assembloid.TILE_SIZE) + x;
+                            let tileY = (this.marker.y / Assembloid.TILE_SIZE) + y;
+                            this.tilemap.putTile(tileIndex, tileX, tileY, this.componentLayer);
+                        });
+                    });
+
+                }
+
             }, this);
 
             this.markerComponent = ComponentType.MACHINE_1;
@@ -234,9 +255,7 @@ module Base {
                         let tileY = (this.marker.y / Assembloid.TILE_SIZE) + y;
                         this.overlayMap.putTile(tileIndex, tileX, tileY, this.overlayLayer);
 
-                        if (canPlace && (activePointer.leftButton.isDown || activePointer.rightButton.isDown)) {
-                            // TODO: Stop this from happening pure tonnes of times during a click
-                            this.components.push(newComponent);
+                        if (canPlace && activePointer.leftButton.isDown && !this.leftClickPressed ) {
                             this.tilemap.putTile(tileIndex, tileX, tileY, this.componentLayer);
                         }
 
@@ -244,6 +263,13 @@ module Base {
                     });
 
                 });
+
+                if ( activePointer.leftButton.isDown && !this.leftClickPressed ) {
+                    this.components.push(newComponent);
+                }
+
+                // Note if left click is pressed, stops placement happening multiple times
+                this.leftClickPressed = activePointer.leftButton.isDown;
             }
 
         }
