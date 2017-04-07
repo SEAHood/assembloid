@@ -27,7 +27,7 @@ module Base {
 
         private static TILE_SIZE = 32;
 
-        private markerComponent: ComponentType;
+        private markerComponent: Component;
         private selectedComponent: Component; // Highlighted by the cursor, element of this.components
 
         private componentToBePlaced: Component;
@@ -39,11 +39,12 @@ module Base {
                 480, 480,
                 Phaser.AUTO,
                 'content',
-                {
+                this
+                /*{
                     preload: this.preload,
                     create: this.create,
                     update: this.update
-                });
+                }*/);
 
         }
 
@@ -98,22 +99,23 @@ module Base {
             }, this);
 
             this.componentKey1.onDown.add(() => {
-                this.markerComponent = ComponentType.MACHINE_1;
+                this.markerComponent = new Machine1();
             }, this);
 
             this.componentKey2.onDown.add(() => {
-                this.markerComponent = ComponentType.MACHINE_2;
+                this.markerComponent = new Machine2();
             }, this);
 
             this.componentKey3.onDown.add(() => {
-                this.markerComponent = ComponentType.PIPE;
+                this.markerComponent = new Pipe();
             }, this);
 
             this.rotateKey.onDown.add(() => {
                 //this.selectedComponent.rotate();
                 if ( this.selectedComponent instanceof Pipe ) {
-                    let direction = PipeDirection[Math.floor(Math.random()*7)];
-                    (<Pipe>this.selectedComponent).setDirection( Math.floor(Math.random()*7) );
+                    let direction = PipeOrientation[Math.floor(Math.random()*7)];
+                    //(<Pipe>this.selectedComponent).setOrientation( Math.floor(Math.random()*7) );
+                    (<Pipe>this.selectedComponent).rotate();
 
 
                     // TODO FARM THIS OUT - "drawComponent( component )"
@@ -128,10 +130,21 @@ module Base {
 
                 }
 
+                if ( this.markerComponent instanceof Pipe ) {
+                    (<Pipe>this.markerComponent).rotate();
+                }
+
             }, this);
 
-            this.markerComponent = ComponentType.MACHINE_1;
+            this.markerComponent = new Machine1();
 
+        }
+
+        private getComponentOnTile( tile : Phaser.Tile ) : Component {
+            if ( !tile ) { return null; }
+            return _.find( this.components, (component : Component) => {
+                return component.occupies(tile);
+            });
         }
 
         private update() {
@@ -154,8 +167,7 @@ module Base {
                 }
             });
 
-
-            switch (this.markerComponent) {
+            switch ( this.markerComponent.getType() ) {
                 case ComponentType.MACHINE_1:
                     newComponent = new Machine1();
                     break;
@@ -166,9 +178,8 @@ module Base {
                     newComponent = new Pipe();
                     break;
                 default:
-                    break;
+                    return;
             }
-
 
             this.markerWidth = newComponent.getWidth();
             this.markerHeight = newComponent.getHeight();
@@ -245,8 +256,41 @@ module Base {
 
                 let cX = this.marker.x / Assembloid.TILE_SIZE;
                 let cY = this.marker.y / Assembloid.TILE_SIZE;
-
                 newComponent.setPosition(cX, cY);
+                this.markerComponent.setPosition(cX, cY);
+
+                // if its a pipe, figure out what it's initial rotation should be
+                if ( newComponent.getType() == ComponentType.PIPE ) {
+
+                    (<Pipe>this.markerComponent).clearConnections();
+
+                    let tileTop = this.tilemap.getTile( selectedTile.x, selectedTile.y - 1, this.componentLayer );
+                    let tileBottom = this.tilemap.getTile( selectedTile.x, selectedTile.y + 1, this.componentLayer );
+                    let tileLeft = this.tilemap.getTile( selectedTile.x - 1, selectedTile.y, this.componentLayer );
+                    let tileRight = this.tilemap.getTile( selectedTile.x + 1, selectedTile.y, this.componentLayer );
+
+                    let leftComponent = this.getComponentOnTile( tileLeft );
+                    let rightComponent = this.getComponentOnTile( tileRight );
+                    let topComponent = this.getComponentOnTile( tileTop );
+                    let bottomComponent = this.getComponentOnTile( tileBottom );
+
+                    if ( leftComponent && leftComponent.getType() == ComponentType.PIPE && (<Pipe>leftComponent).facesDirection(PipeDirection.RIGHT) ) {
+                        (<Pipe>newComponent).connect(<Pipe>leftComponent);
+                        (<Pipe>this.markerComponent).connect(<Pipe>leftComponent);
+                    }
+                    if ( rightComponent && rightComponent.getType() == ComponentType.PIPE && (<Pipe>rightComponent).facesDirection(PipeDirection.LEFT) ) {
+                        (<Pipe>newComponent).connect(<Pipe>rightComponent);
+                        (<Pipe>this.markerComponent).connect(<Pipe>rightComponent);
+                    }
+                    if ( topComponent && topComponent.getType() == ComponentType.PIPE && (<Pipe>topComponent).facesDirection(PipeDirection.BOTTOM) ) {
+                        (<Pipe>newComponent).connect(<Pipe>topComponent);
+                        (<Pipe>this.markerComponent).connect(<Pipe>topComponent);
+                    }
+                    if ( bottomComponent && bottomComponent.getType() == ComponentType.PIPE && (<Pipe>bottomComponent).facesDirection(PipeDirection.TOP) ) {
+                        (<Pipe>newComponent).connect(<Pipe>bottomComponent);
+                        (<Pipe>this.markerComponent).connect(<Pipe>bottomComponent);
+                    }
+                }
 
                 let tileGraphics = newComponent.getTileGraphics();
                 _.each(tileGraphics, (row, y) => {

@@ -16,6 +16,8 @@ module Base {
         protected width: number;
         protected height: number;
 
+        protected type: ComponentType
+
         protected tileGraphics: number[][];
 
         constructor() {}
@@ -56,6 +58,10 @@ module Base {
 
         public getY() : number {
             return this.y;
+        }
+
+        public getType() : ComponentType {
+            return this.type;
         }
 
     }
