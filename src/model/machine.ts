@@ -48,13 +48,6 @@ module Base {
         RIGHT
     }
 
-    interface PipeConnections {
-        top: Pipe;
-        bottom: Pipe;
-        left: Pipe;
-        right: Pipe;
-    }
-
     interface PipeConnection {
         pipe: Pipe,
         direction: PipeDirection
@@ -210,24 +203,60 @@ module Base {
         }
 
         private calculateOrientation() {
-            // todo refactor this fucking disgusting mess
+
+            let hasTopConnection = false,
+                hasBottomConnection = false,
+                hasLeftConnection = false,
+                hasRightConnection = false;
+
+            _.each( this.connections, (c : PipeConnection) => {
+                hasTopConnection = hasTopConnection || c.direction == PipeDirection.TOP;
+                hasBottomConnection = hasBottomConnection || c.direction == PipeDirection.BOTTOM;
+                hasLeftConnection = hasLeftConnection || c.direction == PipeDirection.LEFT;
+                hasRightConnection = hasRightConnection || c.direction == PipeDirection.RIGHT;
+            });
+
+            if ( hasTopConnection ) {
+                if ( hasBottomConnection ) {
+                    this.setOrientation( PipeOrientation.STRAIGHT_T_B );
+                } else if ( hasLeftConnection ) {
+                    this.setOrientation( PipeOrientation.CURVE_L_T );
+                } else if ( hasRightConnection ) {
+                    this.setOrientation( PipeOrientation.CURVE_R_T );
+                } else {
+                    this.setOrientation( PipeOrientation.STRAIGHT_T_B );
+                }
+            } else if ( hasBottomConnection ) {
+                if ( hasLeftConnection ) {
+                    this.setOrientation( PipeOrientation.CURVE_L_B );
+                } else if ( hasRightConnection ) {
+                    this.setOrientation( PipeOrientation.CURVE_R_B );
+                } else {
+                    this.setOrientation( PipeOrientation.STRAIGHT_T_B );
+                }
+            } else {
+                this.setOrientation( PipeOrientation.STRAIGHT_L_R );
+            }
+
+
+            /*// todo refactor this fucking disgusting mess
             if ( this.connections.length > 1 ) {
-                if ( this.connections[0].direction == PipeDirection.TOP || this.connections[1].direction == PipeDirection.TOP ) {
-                    if ( this.connections[0].direction == PipeDirection.BOTTOM || this.connections[1].direction == PipeDirection.BOTTOM ) {
+                if ( _.any( this.connections, c => c.direction == PipeDirection.TOP ) ) {
+                    if ( _.any( this.connections, c => c.direction == PipeDirection.BOTTOM ) ) {
                         this.setOrientation( PipeOrientation.STRAIGHT_T_B );
-                    } else if ( this.connections[0].direction == PipeDirection.LEFT || this.connections[1].direction == PipeDirection.LEFT ) {
+                    } else if ( _.any( this.connections, c => c.direction == PipeDirection.LEFT ) ) {
                         this.setOrientation( PipeOrientation.CURVE_L_T );
-                    } else if ( this.connections[0].direction == PipeDirection.RIGHT || this.connections[1].direction == PipeDirection.RIGHT ) {
+                    } else if ( _.any( this.connections, c => c.direction == PipeDirection.RIGHT ) ) {
                         this.setOrientation( PipeOrientation.CURVE_R_T );
                     }
-                } else if ( this.connections[0].direction == PipeDirection.BOTTOM || this.connections[1].direction == PipeDirection.BOTTOM ) {
-                    if ( this.connections[0].direction == PipeDirection.LEFT || this.connections[1].direction == PipeDirection.LEFT ) {
+                } else if ( _.any( this.connections, c => c.direction == PipeDirection.BOTTOM ) ) {
+                    if ( _.any( this.connections, c => c.direction == PipeDirection.LEFT ) ) {
                         this.setOrientation( PipeOrientation.CURVE_L_B );
-                    } else if ( this.connections[0].direction == PipeDirection.RIGHT || this.connections[1].direction == PipeDirection.RIGHT ) {
+                    } else if ( _.any( this.connections, c => c.direction == PipeDirection.RIGHT ) ) {
                         this.setOrientation( PipeOrientation.CURVE_R_B );
                     }
-                } else if ( this.connections[0].direction == PipeDirection.LEFT || this.connections[1].direction == PipeDirection.LEFT ) {
-                    if ( this.connections[0].direction == PipeDirection.RIGHT || this.connections[1].direction == PipeDirection.RIGHT ) {
+                } else if ( _.any( this.connections, c => c.direction == PipeDirection.LEFT ) ) {
+                    if ( _.any( this.connections, c => c.direction == PipeDirection.RIGHT ) ) {
                         this.setOrientation( PipeOrientation.STRAIGHT_L_R );
                     }
                 }
@@ -249,7 +278,7 @@ module Base {
                         this.setOrientation( PipeOrientation.DISCONNECTED );
                         break;
                 }
-            }
+            }*/
         }
 
         public getTileGraphics(): number[][] {
