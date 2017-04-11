@@ -8,16 +8,13 @@ module Base {
 
     export class Component {
 
-        // x, y of top-left corner in tiles
-        private x: number;
+        private x: number; // x, y of top-left corner in tiles
         private y: number;
-
-        // w/h in tiles
-        protected width: number;
+        private placed = false;
+        private stale = false; // Component is stale if it's state has changed but the tiles associated have not yet been updated
+        protected width: number; // w/h in tiles
         protected height: number;
-
-        protected type: ComponentType
-
+        protected type: ComponentType;
         protected tileGraphics: number[][];
 
         constructor() {}
@@ -31,6 +28,10 @@ module Base {
             this.y = y;
         }
 
+        public rotate() {
+            this.stale = true;
+        }
+
         public occupies(tile: Phaser.Tile): boolean {
             if ( this.x !== null && this.y !== null ) {
                 for (let x = 0; x < this.width; x++) {
@@ -42,6 +43,29 @@ module Base {
                 }
             }
             return false;
+        }
+
+        public requiresRedraw() : boolean {
+            return this.stale;
+        }
+
+        public freshenUp() {
+            console.log("Freshening up");
+            this.stale = false;
+        }
+
+        public place() {
+            console.log("Placed!");
+            console.trace();
+            this.placed = true;
+        }
+
+        public unplace() {
+            this.placed = false;
+        }
+
+        public isPlaced() : boolean {
+            return this.placed;
         }
 
         public getWidth() : number {

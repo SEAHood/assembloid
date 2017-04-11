@@ -83,8 +83,20 @@ module Base {
            1 |__|XX|__|
            2 |__|__|__|
             */
+
+            //console.log("Attempting to connect " + pipe.getX() + ", " + pipe.getY() + " to " + this.getX() + ", " + this.getY())
             let validConnection = false;
 
+            //console.log("Connecting!");
+            //console.log(this.connections);
+            let alreadyConnected = _.any( this.connections, (c : PipeConnection) => {
+                console.log((pipe.getX() == c.pipe.getX() && pipe.getY() == c.pipe.getY())?"already connected!":"");
+                return pipe.getX() == c.pipe.getX() && pipe.getY() == c.pipe.getY();
+            });
+
+
+            console.log("this.x: " + this.getX() + ", other.x: " + pipe.getX() );
+            console.log("this.y: " + this.getY() + ", other.y: " + pipe.getY() );
             if ( this.connections.length < 2 ) {
                 if (this.getY() - 1 == pipe.getY()) {
                     if (this.getX() == pipe.getX()) {
@@ -131,6 +143,7 @@ module Base {
                 }
             }
 
+            console.log(this.connections);
             this.calculateOrientation();
 
             return validConnection;
@@ -143,7 +156,9 @@ module Base {
         }
 
         public clearConnections() {
+            console.log("clearing connections");
             this.connections = [];
+            this.calculateOrientation();
         }
 
         getOrientation() {
@@ -152,13 +167,15 @@ module Base {
 
         public setOrientation(orientation: PipeOrientation) {
             this.orientation = orientation;
+            //console.log("Setting orientation to " + PipeOrientation[orientation]);
+            //console.trace();
         }
 
         public rotate() {
             let possibleOrientations = this.calculatePossibleOrientations();
             let newOrientation = this.orientation;
             console.log("Current orientation: " + this.orientation);
-            console.log(possibleOrientations);
+            console.log("Possible orientations: ", possibleOrientations);
             for ( let i = 0; i < possibleOrientations.length; i++ ) {
 
                 if ( possibleOrientations[i] == this.orientation ) {
@@ -167,8 +184,10 @@ module Base {
                 }
             }
 
-            console.log("Setting new orientation to "+ newOrientation);
-            this.orientation = newOrientation;
+            console.log("Setting new orientation to "+ newOrientation + " on " + (this.isPlaced() ? "placed" : "unplaced") + " pipe");
+            this.setOrientation(newOrientation);
+            super.rotate();
+
         }
 
         public facesDirection( direction : PipeDirection ) : boolean {
@@ -187,7 +206,8 @@ module Base {
         }
 
         private calculatePossibleOrientations() : PipeOrientation[] {
-            console.log(this.connections.length);
+            //console.log(this.connections.length);
+            //console.log(this.connections);
             if ( this.connections.length > 1 ) {
                 // can't change direction, pipe is fixed
                 return [];
@@ -249,7 +269,11 @@ module Base {
                         this.setOrientation( PipeOrientation.DISCONNECTED );
                         break;
                 }
+            } else {
+                this.setOrientation( PipeOrientation.STRAIGHT_L_R)
             }
+
+            //console.log("Orientation changed to " + PipeOrientation[this.orientation]);
         }
 
         public getTileGraphics(): number[][] {
